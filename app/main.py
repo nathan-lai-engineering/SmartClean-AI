@@ -5,6 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 from models.feature_extractor import extract_features, extract_features_groq
+from models.matching_model import rank_cleaners
 
 st.set_page_config(page_title="SmartClean AI", layout="centered")
 
@@ -100,7 +101,28 @@ st.divider()
 
 if job:
     st.subheader("Top Matches")
-    st.info("Matching engine not connected yet.")
+
+    matches, metrics = rank_cleaners(job, top_n=5)
+
+    for i, row in matches.iterrows():
+        st.markdown(f"### {i+1}. {row['name']}")
+        st.write(
+            f"**Location:** {row['city']}, {row['state']}  \n"
+            f"**Rating:** {row['stars']} ({int(row['review_count'])} reviews)  \n"
+            f"**Estimated Rate:** ${row['hourly_rate_est']:.2f}/hr  \n"
+            f"**Predicted Match Score:** {row['predicted_compatibility']:.3f}"
+        )
+
+        if row["reason_tags"]:
+            st.write("**Why this match:** " + ", ".join(row["reason_tags"]))
+
+        with st.expander("Categories"):
+            st.write(row["categories"])
+
+        st.divider()
+
+    with st.expander("Model metrics"):
+        st.json(metrics)
 
     with st.expander("Parsed job features (debug)"):
         st.json(job)

@@ -67,7 +67,7 @@ def extract_features(text: str) -> dict:
         features["window_cleaning"] = 1
     if "office" in t or "commercial" in t:
         features["office_commercial"] = 1
-    if "detailed oriented" in t:
+    if "detail oriented" in t or "detailed oriented" in t:
         features["detail_oriented"] = 1
     if "urgent" in t or "fast" in t:
         features["fast_turnaround"] = 1
