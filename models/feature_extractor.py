@@ -64,10 +64,14 @@ def extract_features(text: str) -> dict:
 
     return features
 
-# test
+# manual input from user
 def main():
-    test_text = "Need a deep clean for a 2 bed 2 bath apartment with a dog. Budget is $50/hr"
-    features = extract_features(test_text)
+    print("Enter your cleaning request: ")
+    user_input = input()
+
+    features = extract_features(user_input)
+
+    print("Extracted Features:")
     print(features)
 
 
