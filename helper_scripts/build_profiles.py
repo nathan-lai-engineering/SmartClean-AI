@@ -2,9 +2,9 @@ import pandas as pd
 
 
 def main():
-    businesses = pd.read_csv("../data/yelp_businesses_clean.csv")
-    tags = pd.read_csv("../data/demo_cleaner_tags.csv")
-    wages = pd.read_csv("../data/state_wages.csv")
+    businesses = pd.read_csv("./data/yelp_businesses_clean.csv")
+    tags = pd.read_csv("./data/demo_cleaner_tags.csv")
+    wages = pd.read_csv("./data/state_wages.csv")
 
     # Keep only the business columns we actually want
     business_cols = [
@@ -39,7 +39,7 @@ def main():
     profiles = businesses.merge(
         tags[["business_id"] + tag_cols],
         on="business_id",
-        how="left"
+        how="inner"
     )
 
     # Merge state wages using Yelp state abbreviation -> wage table state_abbr
@@ -72,7 +72,7 @@ def main():
     # Drop redundant wage merge key
     profiles = profiles.drop(columns=["state_abbr"])
 
-    profiles.to_csv("../data/cleaner_profiles.csv", index=False)
+    profiles.to_csv("./data/cleaner_profiles.csv", index=False)
     print("Saved data/cleaner_profiles.csv")
     print(f"Rows: {len(profiles)}")
     print(profiles.head())
