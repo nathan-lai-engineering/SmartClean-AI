@@ -17,9 +17,9 @@ ROOT_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR       = os.path.join(ROOT_DIR, "data")
 BUSINESSES_CSV = os.path.join(DATA_DIR, "yelp_businesses_clean.csv")
 REVIEWS_CSV    = os.path.join(DATA_DIR, "yelp_reviews_clean.csv")
-OUTPUT_CSV     = os.path.join(DATA_DIR, "cleaner_tags.csv")
+OUTPUT_CSV     = os.path.join(DATA_DIR, "demo_cleaner_tags.csv")
 
-SAMPLE_SIZE    = 50
+SAMPLE_SIZE    = 200
 MAX_REVIEWS    = 20   # reviews per business sent to LLM
 TOKENS_PER_MINUTE = 6000  # Groq free tier limit for llama-3.3-70b-versatile
 RATE_LIMIT_BUFFER = 1.15  # 15% safety margin
@@ -84,7 +84,16 @@ def main():
     sample = pool.sample(n=min(SAMPLE_SIZE, len(pool)), random_state=42).reset_index(drop=True)
     print(f"Sampled {len(sample)} businesses.")
 
-    results = []
+    # load already-tagged businesses to skip them
+    if os.path.exists(OUTPUT_CSV):
+        existing = pd.read_csv(OUTPUT_CSV)
+        already_tagged = set(existing["business_id"].tolist())
+        results = existing.to_dict("records")
+        print(f"Resuming: {len(already_tagged)} already tagged, {len(sample) - len(already_tagged)} remaining.")
+    else:
+        already_tagged = set()
+        results = []
+
     for i, row in sample.iterrows():
         bid  = row["business_id"]
         name = row["name"]
@@ -92,6 +101,9 @@ def main():
         biz_reviews = reviews[reviews["business_id"] == bid]["text"].tolist()
         biz_reviews = biz_reviews[:MAX_REVIEWS]
         reviews_text = "\n\n".join(biz_reviews)
+
+        if bid in already_tagged:
+            continue
 
         print(f"[{i+1}/{len(sample)}] {name} ({len(biz_reviews)} reviews)...")
 
