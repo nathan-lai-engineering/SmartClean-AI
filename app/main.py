@@ -15,7 +15,7 @@ st.divider()
 
 st.subheader("Tell us about your job")
 
-tab_form, tab_text = st.tabs(["Structured Form", "Free Text"])
+tab_text, tab_form = st.tabs(["Free Text", "Structured Form"])
 
 job = None
 
@@ -72,6 +72,7 @@ with tab_form:
 
 # --- Free Text ---
 with tab_text:
+    st.caption("Prefer to fill out a form instead? Switch to the **Structured Form** tab right above this message.")
     user_text = st.text_area(
         "Describe your cleaning job",
         placeholder="e.g. I need a deep clean for a 3 bed 2 bath house, about 1800 sq ft. Budget around $45/hr. We have pets.",
