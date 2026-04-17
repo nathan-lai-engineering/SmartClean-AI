@@ -14,8 +14,8 @@ def safe_clip(value, low=0.0, high=1.0):
 def main():
     np.random.seed(RANDOM_SEED)
 
-    ames = pd.read_csv("../data/AmesHousing.csv")
-    cleaners = pd.read_csv("../data/cleaner_profiles.csv")
+    ames = pd.read_csv("./data/AmesHousing.csv")
+    cleaners = pd.read_csv("./data/cleaner_profiles.csv")
 
     # Keep only rows with the housing fields we need
     required_cols = ["Gr Liv Area", "Bedroom AbvGr", "Full Bath", "Half Bath", "Year Built"]
@@ -141,7 +141,7 @@ def main():
             })
 
     training = pd.DataFrame(rows)
-    training.to_csv("../data/training_data.csv", index=False)
+    training.to_csv("./data/training_data.csv", index=False)
 
     print("Saved data/training_data.csv")
     print(f"Rows: {len(training)}")
