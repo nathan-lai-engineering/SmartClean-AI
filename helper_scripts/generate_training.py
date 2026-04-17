@@ -62,7 +62,7 @@ def main():
         else:
             job_type = "standard"
 
-        # Synthetic budget centered around estimated labor
+        # Synthetic budget based around estimated labor
         target_budget_per_hour = np.random.normal(35, 8)
         target_budget_per_hour = max(18, target_budget_per_hour)
 

@@ -19,7 +19,7 @@ def main():
     ]
     businesses = businesses[business_cols].copy()
 
-    # Tag columns from your actual file
+    # Tag columns from file
     tag_cols = [
         "deep_clean",
         "move_out",
@@ -42,7 +42,7 @@ def main():
         how="inner"
     )
 
-    # Merge state wages using Yelp state abbreviation -> wage table state_abbr
+    # Merge state wages using Yelp state abbreviation 
     profiles = profiles.merge(
         wages[["state_abbr", "avg_hourly_wage"]],
         left_on="state",
@@ -66,7 +66,7 @@ def main():
     profiles["cleaner_rating_scaled"] = profiles["stars"] / 5.0
     profiles["review_count_scaled"] = (profiles["review_count"] / 100.0).clip(upper=1.0)
 
-    # Optional: keep only open businesses
+    # Keep only open businesses
     profiles = profiles[profiles["is_open"] == 1].copy()
 
     # Drop redundant wage merge key
