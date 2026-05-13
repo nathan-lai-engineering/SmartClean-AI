@@ -71,6 +71,64 @@ with tab_form:
             "office_commercial": int("office_commercial" in req),
         }
 
+        # Updated old budget display ersion to Ranked Recommendations
+        # Top matches with score, matched tags, and budget status
+        st.subheader("Top Cleaner Matches")
+
+        matches, _ = rank_cleaners(job, top_n=5)
+
+        possible_tags = [
+            "deep_clean",
+            "move_out",
+            "post_construction",
+            "pet_friendly",
+            "fast_turnaround",
+            "detail_oriented",
+            "eco_friendly",
+            "window_cleaning",
+            "office_commercial"
+        ]
+
+        for index, cleaner in matches.iterrows():
+            cleaner_rate = cleaner.get("hourly_rate_est", 0)
+            user_budget = job["target_budget_per_hour"]
+
+            if cleaner_rate <= user_budget:
+                budget_status = "Within Budget"
+            elif cleaner_rate <= user_budget + 10:
+                budget_status = "Slightly Above Budget"
+            else:
+                budget_status = "Over Budget"
+
+            matched_tags = []
+
+            for tag in possible_tags:
+                if job.get(tag, 0) == 1 and cleaner.get(tag, 0) == 1:
+                    matched_tags.append(tag.replace("_", " ").title())
+
+            if not matched_tags:
+                matched_tags.append("General cleaning match")
+
+            with st.container(border=True):
+                st.markdown(f"#{index + 1}: {cleaner.get('name', 'Cleaner')}")
+
+                st.write(
+                    f"Compatibility: "
+                    f"{cleaner.get('predicted_compatibility', 0) * 100:.1f}%"
+                )
+
+                st.write(f"Cleaner Rate: ${cleaner_rate:.2f}/hr")
+                st.write(f"Your Budget: ${user_budget:.2f}/hr")
+                st.write(f"Budget Status: {budget_status}")
+                st.write(f"Matched Tags: {', '.join(matched_tags)}")
+
+                if "stars" in cleaner:
+                    st.write(f"Rating: {cleaner['stars']} stars")
+
+                if "review_count" in cleaner:
+                    st.write(f"Reviews: {cleaner['review_count']}")
+
+
 # --- Free Text ---
 with tab_text:
     st.caption("Prefer to fill out a form instead? Switch to the **Structured Form** tab right above this message.")
