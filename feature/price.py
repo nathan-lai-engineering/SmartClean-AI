@@ -11,7 +11,7 @@ def estimate_price(
     """
     Estimate total cleaning price based on multiple factors.
 
-    Parameters:
+    Input:
     - square_feet: size of the home
     - job_type: type of cleaning (standard, deep_clean, move_out, post_construction)
     - bedrooms: number of bedrooms
@@ -19,7 +19,7 @@ def estimate_price(
     - house_age: older homes may require more effort
     - extras: optional dictionary of special requirements (bool flags)
 
-    Returns:
+    Output:
     - Estimated total price (USD)
     """
 
