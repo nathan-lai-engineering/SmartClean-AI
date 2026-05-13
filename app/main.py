@@ -71,6 +71,28 @@ with tab_form:
             "office_commercial": int("office_commercial" in req),
         }
 
+        # add budget status display
+        matches, _ = rank_cleaners(job, top_n=5)
+
+        st.subheader("Budget Check (Top Match)")
+
+        top_cleaner = matches.iloc[0]
+
+        cleaner_rate = top_cleaner.get("hourly_rate_est", 0)
+        user_budget = job["target_budget_per_hour"]
+
+        if cleaner_rate <= user_budget:
+            budget_status = "Within Budget"
+        elif cleaner_rate <= user_budget + 10:
+            budget_status = "Slightly Above Budget"
+        else:
+            budget_status = "Over Budget"
+
+        st.write(f"Cleaner Rate: ${cleaner_rate:.2f}/hr")
+        st.write(f"Your Budget: ${user_budget:.2f}/hr")
+        st.write(f"Budget Status: {budget_status}")
+
+
 # --- Free Text ---
 with tab_text:
     st.caption("Prefer to fill out a form instead? Switch to the **Structured Form** tab right above this message.")
