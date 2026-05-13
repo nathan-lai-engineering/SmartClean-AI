@@ -7,7 +7,7 @@ import os
 import re
 import time
 import pandas as pd
-from groq import Groq
+from groq import Groq, RateLimitError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -111,6 +111,12 @@ def main():
         try:
             tags, tokens_used = extract_tags(client, reviews_text)
         except Exception as e:
+            if isinstance(e, RateLimitError):
+                print(f"  Rate limit reached -- saving progress and stopping.")
+                df = pd.DataFrame(results)
+                df.to_csv(OUTPUT_CSV, index=False)
+                print(f"Saved {len(df)} rows to {OUTPUT_CSV}. Re-run to continue.")
+                return
             print(f"  ERROR: {e} -- skipping, all tags set to 0")
             tags = {tag: 0 for tag in TAGS}
             tokens_used = 0
