@@ -25,24 +25,7 @@ SmartClean AI uses a machine learning recommendation engine to match customers t
 
 **End-to-end pipeline:**
 
-```
-Customer Request (free text or form)
-        |
-        v
-NLP Feature Extractor
-(regex + keyword parsing -> home_size, cleaning_type, budget, special_requirements)
-        |
-        v
-Cleaner Profile Pool (real Yelp businesses + LLM-extracted capability tags)
-        |
-        v
-Random Forest Regressor
-(predicts compatibility score 0-100 for each job-cleaner pair)
-        |
-        v
-Ranked Recommendations (Streamlit dashboard)
-top matches with score, matched tags, budget status
-```
+![Alt text](docs/SmartClean_SystemOverview.png)
 
 ---
 
