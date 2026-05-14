@@ -221,14 +221,18 @@ if job:
                 with col_rate:
                     if abs(budget_diff) <= 8:
                         rate_bg, rate_color = "#2d6a4f", "white"
+                        budget_status = "Within Budget"
                     elif budget_diff > 0:
                         rate_bg, rate_color = "#b5451b", "white"
+                        budget_status = "Slightly Above Budget" if budget_diff <= 10 else "Over Budget"
                     else:
                         rate_bg, rate_color = "#5a5a5a", "white"
+                        budget_status = "Under Budget"
                     rate_html = (
                         f'<span style="background:{rate_bg};color:{rate_color};'
                         f'padding:5px 12px;border-radius:10px;font-weight:700;'
                         f'font-size:1.1rem;">${rate:.0f}/hr</span>'
+                        f'<br><small style="color:{rate_bg};">{budget_status}</small>'
                     )
                     st.markdown(rate_html, unsafe_allow_html=True)
 
@@ -239,6 +243,8 @@ if job:
                         for t in matched_tags
                     )
                     st.markdown(badges, unsafe_allow_html=True)
+                elif requested:
+                    st.caption("General cleaning match")
 
                 yelp_url = (
                     "https://www.yelp.com/search?find_desc="
