@@ -19,7 +19,7 @@ BUSINESSES_CSV = os.path.join(DATA_DIR, "yelp_businesses_clean.csv")
 REVIEWS_CSV    = os.path.join(DATA_DIR, "yelp_reviews_clean.csv")
 OUTPUT_CSV     = os.path.join(DATA_DIR, "demo_cleaner_tags.csv")
 
-SAMPLE_SIZE    = 200
+SAMPLE_SIZE    = 400
 MAX_REVIEWS    = 20   # reviews per business sent to LLM
 TOKENS_PER_MINUTE = 6000  # Groq free tier limit for llama-3.3-70b-versatile
 RATE_LIMIT_BUFFER = 1.15  # 15% safety margin
