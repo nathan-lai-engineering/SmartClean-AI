@@ -195,26 +195,56 @@ def rank_cleaners(job: dict, top_n: int = 5):
     # Predict base compatibility scores
     candidates["predicted_compatibility"] = model.predict(X_candidates)
 
-    # Add a small boost when cleaner tags match requested job needs
+    # Add a boost when cleaner tags match requested job needs
     specialization_bonus = (
         (job.get("deep_clean", 0) * candidates["deep_clean"]) +
         (job.get("move_out", 0) * candidates["move_out"]) +
         (job.get("pet_friendly", 0) * candidates["pet_friendly"]) +
         (job.get("fast_turnaround", 0) * candidates["fast_turnaround"]) +
         (job.get("detail_oriented", 0) * candidates["detail_oriented"]) +
-        (job.get("eco_friendly", 0) * candidates["eco_friendly"])
-    ) * 0.08
+        (job.get("eco_friendly", 0) * candidates["eco_friendly"]) +
+        (job.get("office_commercial", 0) * candidates["office_commercial"]) +
+        (job.get("window_cleaning", 0) * candidates["window_cleaning"]) +
+        (job.get("post_construction", 0) * candidates["post_construction"])
+    ) * 0.05
 
     candidates["predicted_compatibility"] += specialization_bonus
+
+    # Budget preference handling
+    target_budget = job.get("target_budget_per_hour", 45.0)
+
+    # Measures how close cleaner pricing is to requested budget
+    budget_fit = 1 - (
+        abs(candidates["hourly_rate_est"] - target_budget) / target_budget
+    )
+    budget_fit = budget_fit.clip(0, 1)
+
+    candidates["budget_fit"] = budget_fit
+
+    # Strong penalty for cleaners above the requested budget
+    over_budget = (candidates["hourly_rate_est"] - target_budget).clip(lower=0)
+    over_budget_penalty = (over_budget / target_budget).clip(0, 1) * 0.45
+
+    # Blend model score with budget fit so budget visibly affects ranking
+    candidates["predicted_compatibility"] = (
+        0.75 * candidates["predicted_compatibility"]
+        + 0.25 * budget_fit
+        - over_budget_penalty
+    )
+
+    # Keep final scores between 0 and 1
     candidates["predicted_compatibility"] = candidates["predicted_compatibility"].clip(0, 1)
 
     # Add explanation tags for interpretability
-    candidates["reason_tags"] = candidates.apply(lambda row: _reason_tags(row, job), axis=1)
+    candidates["reason_tags"] = candidates.apply(
+        lambda row: _reason_tags(row, job),
+        axis=1
+    )
 
     # Sort and return top N cleaners
     ranked = candidates.sort_values(
-        by=["predicted_compatibility", "stars", "review_count"],
-        ascending=[False, False, False],
+        by=["predicted_compatibility", "budget_fit", "stars", "review_count"],
+        ascending=[False, False, False, False],
     ).head(top_n)
 
     output_cols = [
