@@ -232,10 +232,11 @@ if job:
                     )
                     st.markdown(rate_html, unsafe_allow_html=True)
 
-                if requested:
+                matched_tags = [t for t in requested if row.get(t, 0) == 1]
+                if matched_tags:
                     badges = "".join(
-                        render_tag_badge(TAG_LABELS[t], row.get(t, 0) == 1)
-                        for t in requested
+                        render_tag_badge(TAG_LABELS[t], True)
+                        for t in matched_tags
                     )
                     st.markdown(badges, unsafe_allow_html=True)
 
@@ -247,8 +248,9 @@ if job:
                 )
                 st.markdown(f"[Search on Yelp]({yelp_url})", unsafe_allow_html=False)
 
-                with st.expander("Categories"):
-                    st.write(row["categories"])
+                with st.expander("Tags"):
+                    all_tags = [TAG_LABELS[t] for t in TAG_LABELS if row.get(t, 0) == 1]
+                    st.write(", ".join(all_tags) if all_tags else "No tags recorded.")
 
     with st.expander("Model metrics"):
         st.json(metrics)

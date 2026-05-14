@@ -258,6 +258,18 @@ def rank_cleaners(job: dict, top_n: int = 5):
         "predicted_compatibility",
         "reason_tags",
         "categories",
+        "deep_clean",
+        "move_out",
+        "post_construction",
+        "eco_friendly",
+        "pet_friendly",
+        "window_cleaning",
+        "office_commercial",
+        "detail_oriented",
+        "fast_turnaround",
+        "reliable",
+        "communicative",
+        "experienced",
     ]
 
     return ranked[output_cols].reset_index(drop=True), metrics
