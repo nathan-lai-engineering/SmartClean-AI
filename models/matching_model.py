@@ -12,6 +12,8 @@ TRAINING_DATA_PATH = "data/training_data.csv"
 CLEANER_PROFILES_PATH = "data/cleaner_profiles.csv"
 
 # Features used for training (job + cleaner attributes)
+# Note: reliable/communicative/experienced excluded — fixed cleaner attributes that
+# dominated predictions (47% importance) without varying by job type.
 FEATURE_COLUMNS = [
     "gr_liv_area",
     "bedroom_abvgr",
@@ -26,6 +28,9 @@ FEATURE_COLUMNS = [
     "needs_fast_turnaround",
     "needs_detail_oriented",
     "needs_eco_friendly",
+    "needs_window_cleaning",
+    "needs_post_construction",
+    "needs_office_commercial",
     "cleaner_rating",
     "cleaner_review_count",
     "hourly_rate_est",
@@ -35,9 +40,9 @@ FEATURE_COLUMNS = [
     "fast_turnaround",
     "detail_oriented",
     "eco_friendly",
-    "reliable",
-    "communicative",
-    "experienced",
+    "window_cleaning",
+    "post_construction",
+    "office_commercial",
 ]
 
 TARGET_COLUMN = "compatibility_score"
@@ -122,6 +127,9 @@ def _normalize_job_features(job: dict) -> dict:
         "needs_fast_turnaround": int(job.get("fast_turnaround", 0)),
         "needs_detail_oriented": int(job.get("detail_oriented", 0)),
         "needs_eco_friendly": int(job.get("eco_friendly", 0)),
+        "needs_window_cleaning": int(job.get("window_cleaning", 0)),
+        "needs_post_construction": int(job.get("post_construction", 0)),
+        "needs_office_commercial": int(job.get("office_commercial", 0)),
     }
 
     return job_features
@@ -159,6 +167,12 @@ def _reason_tags(row: pd.Series, job: dict) -> list[str]:
         reasons.append("detail-oriented")
     if job.get("eco_friendly", 0) and row.get("eco_friendly", 0) == 1:
         reasons.append("eco-friendly")
+    if job.get("window_cleaning", 0) and row.get("window_cleaning", 0) == 1:
+        reasons.append("window cleaning")
+    if job.get("post_construction", 0) and row.get("post_construction", 0) == 1:
+        reasons.append("post-construction")
+    if job.get("office_commercial", 0) and row.get("office_commercial", 0) == 1:
+        reasons.append("office/commercial")
 
     if row.get("stars", 0) >= 4.5:
         reasons.append("high rating")

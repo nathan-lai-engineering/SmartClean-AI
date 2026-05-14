@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -57,6 +58,11 @@ def main():
     profiles["hourly_rate_est"] = profiles["hourly_rate_est"].fillna(
         profiles["hourly_rate_est"].median()
     )
+
+    # Apply customer-facing markup: 2.5x BLS wage + per-business noise (~$30-65/hr)
+    rng = np.random.default_rng(42)
+    markup = rng.uniform(2.2, 2.8, size=len(profiles))
+    profiles["hourly_rate_est"] = (profiles["hourly_rate_est"] * markup).round(2)
 
     # Fill missing tag values with 0
     for col in tag_cols:

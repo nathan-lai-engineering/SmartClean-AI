@@ -3,8 +3,8 @@ import pandas as pd
 
 
 RANDOM_SEED = 42
-N_JOBS = 200
-CLEANERS_PER_JOB = 15
+N_JOBS = 500
+CLEANERS_PER_JOB = 50
 
 
 def safe_clip(value, low=0.0, high=1.0):
@@ -52,6 +52,9 @@ def main():
         needs_fast_turnaround = np.random.binomial(1, 0.25)
         needs_detail_oriented = np.random.binomial(1, 0.35)
         needs_eco_friendly = np.random.binomial(1, 0.15)
+        needs_window_cleaning = np.random.binomial(1, 0.20)
+        needs_post_construction = np.random.binomial(1, 0.10)
+        needs_office_commercial = np.random.binomial(1, 0.10)
 
         if needs_move_out:
             job_type = "move_out"
@@ -62,9 +65,9 @@ def main():
         else:
             job_type = "standard"
 
-        # Synthetic budget based around estimated labor
-        target_budget_per_hour = np.random.normal(35, 8)
-        target_budget_per_hour = max(18, target_budget_per_hour)
+        # Budget range covers low/mid/high to train price sensitivity across the full UI range
+        target_budget_per_hour = np.random.uniform(15, 80)
+        target_budget_per_hour = max(15, target_budget_per_hour)
 
         sampled_cleaners = cleaners.sample(
             min(CLEANERS_PER_JOB, len(cleaners)),
@@ -76,14 +79,25 @@ def main():
             review_count_scaled = cleaner["review_count_scaled"]
             hourly_rate_est = float(cleaner["hourly_rate_est"])
 
-            specialization_fit = (
+            specialization_fit_raw = (
                 needs_deep_clean * cleaner["deep_clean"]
                 + needs_move_out * cleaner["move_out"]
                 + needs_pet_friendly * cleaner["pet_friendly"]
                 + needs_fast_turnaround * cleaner["fast_turnaround"]
                 + needs_detail_oriented * cleaner["detail_oriented"]
                 + needs_eco_friendly * cleaner["eco_friendly"]
-            ) / 6.0
+                + needs_window_cleaning * cleaner["window_cleaning"]
+                + needs_post_construction * cleaner["post_construction"]
+                + needs_office_commercial * cleaner["office_commercial"]
+            )
+            total_needs = (
+                needs_deep_clean + needs_move_out + needs_pet_friendly
+                + needs_fast_turnaround + needs_detail_oriented + needs_eco_friendly
+                + needs_window_cleaning + needs_post_construction + needs_office_commercial
+            )
+            # Normalize by requested tags: 1/1 = 1.0 for a single perfect match.
+            # No tags requested → 1.0 (any cleaner fits a generic job).
+            specialization_fit = (specialization_fit_raw / total_needs) if total_needs > 0 else 1.0
 
             professionalism_fit = (
                 cleaner["reliable"]
@@ -91,15 +105,16 @@ def main():
                 + cleaner["experienced"]
             ) / 3.0
 
-            price_fit = 1 - abs(target_budget_per_hour - hourly_rate_est) / target_budget_per_hour
-            price_fit = safe_clip(price_fit)
+            # Ratio formula: budget/rate, capped at 1. Stays >0 even when rate > budget,
+            # so cheapest cleaners rank higher for budget-constrained jobs.
+            price_fit = min(1.0, target_budget_per_hour / hourly_rate_est)
 
             compatibility_score = (
                 0.40 * specialization_fit
-                + 0.20 * cleaner_rating_scaled
-                + 0.10 * review_count_scaled
-                + 0.15 * price_fit
-                + 0.15 * professionalism_fit
+                + 0.15 * cleaner_rating_scaled
+                + 0.05 * review_count_scaled
+                + 0.35 * price_fit
+                + 0.05 * professionalism_fit
             )
 
             compatibility_score += np.random.normal(0, 0.05)
@@ -122,6 +137,9 @@ def main():
                 "needs_fast_turnaround": needs_fast_turnaround,
                 "needs_detail_oriented": needs_detail_oriented,
                 "needs_eco_friendly": needs_eco_friendly,
+                "needs_window_cleaning": needs_window_cleaning,
+                "needs_post_construction": needs_post_construction,
+                "needs_office_commercial": needs_office_commercial,
                 "cleaner_rating": cleaner["stars"],
                 "cleaner_review_count": cleaner["review_count"],
                 "hourly_rate_est": hourly_rate_est,
@@ -131,9 +149,9 @@ def main():
                 "fast_turnaround": cleaner["fast_turnaround"],
                 "detail_oriented": cleaner["detail_oriented"],
                 "eco_friendly": cleaner["eco_friendly"],
-                "reliable": cleaner["reliable"],
-                "communicative": cleaner["communicative"],
-                "experienced": cleaner["experienced"],
+                "window_cleaning": cleaner["window_cleaning"],
+                "post_construction": cleaner["post_construction"],
+                "office_commercial": cleaner["office_commercial"],
                 "specialization_fit": specialization_fit,
                 "professionalism_fit": professionalism_fit,
                 "price_fit": price_fit,
