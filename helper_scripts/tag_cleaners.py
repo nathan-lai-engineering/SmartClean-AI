@@ -1,6 +1,6 @@
 """
 Reads yelp_businesses_clean.csv + yelp_reviews_clean.csv.
-Calls Groq (Llama 3.1) to extract 12 fixed capability tags per business.
+Calls Groq (Llama 3.3) to extract 12 fixed capability tags per business.
 """
 
 import os
@@ -39,7 +39,9 @@ TAGS = [
     "experienced",
 ]
 
-PROMPT_TEMPLATE = """You are tagging a cleaning business based on customer reviews.
+# Fixed system message — sent once and cached by Groq on subsequent calls,
+# saving ~60 input tokens per request compared to embedding it in the user turn.
+SYSTEM_PROMPT = """You are tagging a cleaning business based on customer reviews.
 
 Return ONLY a comma-separated list of tags that clearly apply, chosen from this fixed list:
 deep_clean, move_out, post_construction, eco_friendly, pet_friendly, window_cleaning, office_commercial, detail_oriented, fast_turnaround, reliable, communicative, experienced
@@ -47,17 +49,16 @@ deep_clean, move_out, post_construction, eco_friendly, pet_friendly, window_clea
 Rules:
 - Only include tags with clear evidence in the reviews.
 - Do not include any tags not on the list.
-- Do not explain or add any other text.
+- Do not explain or add any other text."""
 
-Reviews:
-{reviews}
-"""
 
 def extract_tags(client, reviews_text):
-    prompt = PROMPT_TEMPLATE.format(reviews=reviews_text)
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Reviews:\n{reviews_text}"},
+        ],
         temperature=0,
         max_tokens=100,
     )
@@ -84,26 +85,26 @@ def main():
     sample = pool.sample(n=min(SAMPLE_SIZE, len(pool)), random_state=42).reset_index(drop=True)
     print(f"Sampled {len(sample)} businesses.")
 
-    # load already-tagged businesses to skip them
+    # Resume: skip businesses already in the output file
     if os.path.exists(OUTPUT_CSV):
         existing = pd.read_csv(OUTPUT_CSV)
         already_tagged = set(existing["business_id"].tolist())
-        results = existing.to_dict("records")
         print(f"Resuming: {len(already_tagged)} already tagged, {len(sample) - len(already_tagged)} remaining.")
     else:
         already_tagged = set()
-        results = []
+        # Write header so append mode works correctly from the first row
+        pd.DataFrame(columns=["business_id", "name"] + TAGS).to_csv(OUTPUT_CSV, index=False)
 
     for i, row in sample.iterrows():
         bid  = row["business_id"]
         name = row["name"]
 
+        if bid in already_tagged:
+            continue
+
         biz_reviews = reviews[reviews["business_id"] == bid]["text"].tolist()
         biz_reviews = biz_reviews[:MAX_REVIEWS]
         reviews_text = "\n\n".join(biz_reviews)
-
-        if bid in already_tagged:
-            continue
 
         print(f"[{i+1}/{len(sample)}] {name} ({len(biz_reviews)} reviews)...")
 
@@ -112,10 +113,7 @@ def main():
             tags, tokens_used = extract_tags(client, reviews_text)
         except Exception as e:
             if isinstance(e, RateLimitError):
-                print(f"  Rate limit reached -- saving progress and stopping.")
-                df = pd.DataFrame(results)
-                df.to_csv(OUTPUT_CSV, index=False)
-                print(f"Saved {len(df)} rows to {OUTPUT_CSV}. Re-run to continue.")
+                print("  Rate limit reached -- progress already saved. Re-run to continue.")
                 return
             print(f"  ERROR: {e} -- skipping, all tags set to 0")
             tags = {tag: 0 for tag in TAGS}
@@ -123,7 +121,9 @@ def main():
 
         entry = {"business_id": bid, "name": name}
         entry.update(tags)
-        results.append(entry)
+
+        # Append this row immediately so progress survives interruptions
+        pd.DataFrame([entry]).to_csv(OUTPUT_CSV, mode="a", header=False, index=False)
 
         # adaptive delay: wait long enough so this request's tokens don't exceed TPM
         elapsed = time.time() - t0
@@ -132,9 +132,8 @@ def main():
         print(f"  tokens: {tokens_used}, wait: {wait:.1f}s")
         time.sleep(wait)
 
-    df = pd.DataFrame(results)
-    df.to_csv(OUTPUT_CSV, index=False)
-    print(f"\nSaved {len(df)} rows to {OUTPUT_CSV}")
+    df = pd.read_csv(OUTPUT_CSV)
+    print(f"\nDone. {len(df)} rows saved to {OUTPUT_CSV}")
     print(df[TAGS].sum().to_string())
 
 
