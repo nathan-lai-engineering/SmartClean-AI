@@ -80,29 +80,37 @@ Llama 3.1 via Groq reads each Yelp business's filtered reviews and extracts a fi
 ```
 SmartClean-AI/
 |
-+-- data/
-|   +-- filter_yelp.py             # filters Yelp dataset to cleaning businesses/reviews
-|   +-- tag_cleaners.py            # Groq/Llama extracts 12 tags per business from reviews
-|   +-- build_profiles.py          # combines Yelp + wages + tags -> cleaner_profiles.csv
-|   +-- generate_training.py       # creates synthetic job-cleaner pairs with satisfaction labels
-|   +-- yelp_businesses_clean.csv  (filtered, real data)
-|   +-- yelp_reviews_clean.csv     (filtered, real data)
-|   +-- state_wages.csv            (real BLS data)
-|   +-- cleaner_profiles.csv       (generated)
-|   +-- training_data.csv          (generated)
-|
-+-- models/
-|   +-- feature_extractor.py       # NLP: customer request text -> structured feature dict
-|   +-- matching_model.py          # ML: train, load, rank_cleaners()
-|   +-- trained_model.pkl          (generated on first run)
-|
 +-- app/
 |   +-- main.py                    # Streamlit dashboard
 |
-+-- docs/
-|   +-- project_plan.md
++-- data/
+|   +-- AmesHousing.csv            # housing dataset
+|   +-- cleaner_profiles.csv       # generated
+|   +-- demo_cleaner_tags.csv      # demo cleaner tag data
+|   +-- state_wages.csv            # real BLS data
+|   +-- training_data.csv          # generated
+|   +-- yelp_businesses_clean.csv  # filtered, real data
+|   +-- yelp_reviews_clean.csv     # filtered, real data
 |
-+-- requirements.txt
++-- docs/
+|   +-- SmartClean_SystemOverview  # system overview document
+|
++-- feature/
+|   +-- price.py                   # pricing and budgeting functionality
+|   +-- time_scheduling.py         # optimized time scheduling logic
+|
++-- helper_scripts/
+|   +-- build_profiles.py          # combines Yelp + wages + tags -> cleaner_profiles.csv
+|   +-- filter_yelp.py             # filters Yelp dataset to cleaning businesses/reviews
+|   +-- generate_training.py       # creates synthetic job-cleaner pairs with satisfaction
+|   +-- tag_cleaners.py            # Groq/Llama extracts 12 tags per business from reviews
+|
++-- models/
+|   +-- feature_extractor.py       # NLP: customer request text -> structured feature dict
+|   +-- matching_model.joblib      # saved trained model file
+|   +-- matching_model.py          # ML: train, load, rank_cleaners()
+|
++-- requirements.txt               # Python dependencies
 ```
 
 ---
