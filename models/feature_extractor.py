@@ -29,6 +29,10 @@ def extract_number(keyword, text):
     return int(match.group(1)) if match else None
 
 
+def is_negated(keyword, text):
+    return bool(re.search(rf'\b(no|not|without|don\'t need|dont need)\b.{{0,20}}{keyword}', text))
+
+
 def estimate_hours(gr_liv_area, bedroom_abvgr, full_bath, house_age):
     return (
         1.5
@@ -53,17 +57,17 @@ def extract_features(text: str) -> dict:
 
     features = {tag: 0 for tag in TAG_COLUMNS}
 
-    if "deep clean" in t:
+    if "deep clean" in t or "deepclean" in t:
         features["deep_clean"] = 1
-    if "move out" in t:
+    if "move out" in t or "moveout" in t:
         features["move_out"] = 1
     if "construction" in t:
         features["post_construction"] = 1
-    if "eco" in t:
+    if "eco" in t and not is_negated("eco", t):
         features["eco_friendly"] = 1
-    if "pet" in t:
+    if "pet" in t and not is_negated("pet", t):
         features["pet_friendly"] = 1
-    if "window" in t:
+    if "window" in t and not is_negated("window", t):
         features["window_cleaning"] = 1
     if "office" in t or "commercial" in t:
         features["office_commercial"] = 1

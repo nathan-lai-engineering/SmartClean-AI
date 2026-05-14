@@ -1,6 +1,7 @@
 import re
 import sys
 import os
+from urllib.parse import quote_plus
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
@@ -20,7 +21,7 @@ tab_text, tab_form = st.tabs(["Free Text", "Structured Form"])
 
 job = None
 
-# structured form to help guide selections
+# --- Structured Form ---
 with tab_form:
     with st.form("job_form"):
         col1, col2 = st.columns(2)
@@ -71,64 +72,6 @@ with tab_form:
             "office_commercial": int("office_commercial" in req),
         }
 
-        # Updated old budget display ersion to Ranked Recommendations
-        # Top matches with score, matched tags, and budget status
-        st.subheader("Top Cleaner Matches")
-
-        matches, _ = rank_cleaners(job, top_n=5)
-
-        possible_tags = [
-            "deep_clean",
-            "move_out",
-            "post_construction",
-            "pet_friendly",
-            "fast_turnaround",
-            "detail_oriented",
-            "eco_friendly",
-            "window_cleaning",
-            "office_commercial"
-        ]
-
-        for index, cleaner in matches.iterrows():
-            cleaner_rate = cleaner.get("hourly_rate_est", 0)
-            user_budget = job["target_budget_per_hour"]
-
-            if cleaner_rate <= user_budget:
-                budget_status = "Within Budget"
-            elif cleaner_rate <= user_budget + 10:
-                budget_status = "Slightly Above Budget"
-            else:
-                budget_status = "Over Budget"
-
-            matched_tags = []
-
-            for tag in possible_tags:
-                if job.get(tag, 0) == 1 and cleaner.get(tag, 0) == 1:
-                    matched_tags.append(tag.replace("_", " ").title())
-
-            if not matched_tags:
-                matched_tags.append("General cleaning match")
-
-            with st.container(border=True):
-                st.markdown(f"#{index + 1}: {cleaner.get('name', 'Cleaner')}")
-
-                st.write(
-                    f"Compatibility: "
-                    f"{cleaner.get('predicted_compatibility', 0) * 100:.1f}%"
-                )
-
-                st.write(f"Cleaner Rate: ${cleaner_rate:.2f}/hr")
-                st.write(f"Your Budget: ${user_budget:.2f}/hr")
-                st.write(f"Budget Status: {budget_status}")
-                st.write(f"Matched Tags: {', '.join(matched_tags)}")
-
-                if "stars" in cleaner:
-                    st.write(f"Rating: {cleaner['stars']} stars")
-
-                if "review_count" in cleaner:
-                    st.write(f"Reviews: {cleaner['review_count']}")
-
-
 # --- Free Text ---
 with tab_text:
     st.caption("Prefer to fill out a form instead? Switch to the **Structured Form** tab right above this message.")
@@ -154,35 +97,152 @@ with tab_text:
         else:
             job = extract_features(user_text)
 
+# --- Constants ---
+TAG_LABELS = {
+    "deep_clean":        "Deep Clean",
+    "move_out":          "Move-Out",
+    "post_construction": "Post-Construction",
+    "eco_friendly":      "Eco-Friendly",
+    "pet_friendly":      "Pet-Friendly",
+    "window_cleaning":   "Window Cleaning",
+    "office_commercial": "Office / Commercial",
+    "detail_oriented":   "Detail-Oriented",
+    "fast_turnaround":   "Fast Turnaround",
+    "reliable":          "Reliable",
+    "communicative":     "Communicative",
+    "experienced":       "Experienced",
+}
+
+JOB_TYPE_LABELS = {
+    "standard":          "Standard Clean",
+    "deep_clean":        "Deep Clean",
+    "move_out":          "Move-Out",
+    "post_construction": "Post-Construction",
+    "fast_turnaround":   "Fast Turnaround",
+}
+
+CAPABILITY_TAGS = [
+    "deep_clean", "move_out", "post_construction", "eco_friendly",
+    "pet_friendly", "window_cleaning", "office_commercial",
+    "detail_oriented", "fast_turnaround",
+]
+
+
+def render_score_badge(score):
+    if score >= 0.65:
+        color, bg = "#2d6a4f", "#d8f3dc"   # green — strong match
+    elif score >= 0.40:
+        color, bg = "#4a4a4a", "#e0e0e0"   # gray — mid match
+    else:
+        color, bg = "#b5451b", "#fde8df"   # red-orange — weak match
+    return (
+        f'<span style="background:{bg};color:{color};padding:4px 12px;'
+        f'border-radius:12px;font-weight:700;font-size:1rem;">{score:.0%}</span>'
+    )
+
+
+def render_tag_badge(label, matched):
+    if matched:
+        style = "background:#d8f3dc;color:#2d6a4f;"   # green — tag met
+    else:
+        style = "background:#f0f0f0;color:#999;"       # gray — tag not met
+    return (
+        f'<span style="{style}padding:3px 9px;border-radius:10px;'
+        f'font-size:0.8rem;margin-right:4px;">{label}</span>'
+    )
+
+
 # --- Results ---
 st.divider()
 
 if job:
-    st.subheader("Top Matches")
+    job_type_label = JOB_TYPE_LABELS.get(job.get("job_type", "standard"), "Standard Clean")
+    active_tags    = [TAG_LABELS[t] for t in TAG_LABELS if job.get(t, 0) == 1]
+    hours          = job.get("estimated_hours", 0)
+    budget_val     = job.get("target_budget_per_hour", 45.0)
+
+    # Exclude the tag that matches the job type to avoid repeating it
+    job_type_tag = job.get("job_type", "standard")
+    extra_tags = [TAG_LABELS[t] for t in TAG_LABELS
+                  if job.get(t, 0) == 1 and t != job_type_tag]
+
+    # Input summary
+    summary_parts = [
+        f"**{job_type_label}**",
+        f"{int(job.get('bedroom_abvgr', 3))} bed · {int(job.get('full_bath', 2))} bath",
+        f"{int(job.get('gr_liv_area', 1500))} sq ft",
+        f"~{hours:.1f} hrs estimated",
+        f"${budget_val:.0f}/hr budget",
+    ]
+    if extra_tags:
+        summary_parts.append(" · ".join(extra_tags))
+    st.info("  ·  ".join(summary_parts))
 
     matches, metrics = rank_cleaners(job, top_n=5)
 
-    for i, row in matches.iterrows():
-        st.markdown(f"### {i+1}. {row['name']}")
-        st.write(
-            f"**Location:** {row['city']}, {row['state']}  \n"
-            f"**Rating:** {row['stars']} ({int(row['review_count'])} reviews)  \n"
-            f"**Estimated Rate:** ${row['hourly_rate_est']:.2f}/hr  \n"
-            f"**Predicted Match Score:** {row['predicted_compatibility']:.3f}"
+    if matches.empty:
+        st.warning(
+            "No cleaners matched your requirements. "
+            "Try broadening your job description or removing some special requirements."
         )
+    else:
+        st.subheader(f"Top matches for your {job_type_label.lower()}")
 
-        if row["reason_tags"]:
-            st.write("**Why this match:** " + ", ".join(row["reason_tags"]))
+        for i, row in matches.iterrows():
+            score      = row["predicted_compatibility"]
+            rate       = row["hourly_rate_est"]
+            budget_diff = rate - budget_val
 
-        with st.expander("Categories"):
-            st.write(row["categories"])
+            with st.container(border=True):
+                col_name, col_badge = st.columns([4, 1])
 
-        st.divider()
+                with col_name:
+                    st.markdown(f"#### {i + 1}. {row['name']}")
+                    st.caption(f"{row['city']}, {row['state']}")
+
+                with col_badge:
+                    st.markdown(render_score_badge(score), unsafe_allow_html=True)
+
+                col_stars, col_rate = st.columns([2, 1])
+
+                with col_stars:
+                    filled  = "★" * int(round(row["stars"]))
+                    empty   = "☆" * (5 - int(round(row["stars"])))
+                    st.markdown(f"{filled}{empty} **{row['stars']}** ({int(row['review_count'])} reviews)")
+
+                with col_rate:
+                    if abs(budget_diff) <= 8:
+                        rate_html = f'<span style="color:#2d6a4f;font-weight:600;">${rate:.0f}/hr</span>'
+                    elif budget_diff > 0:
+                        rate_html = f'<span style="color:#b5451b;font-weight:600;">${rate:.0f}/hr</span>'
+                    else:
+                        rate_html = f'<span style="color:#4a4a4a;font-weight:600;">${rate:.0f}/hr</span>'
+                    st.markdown(rate_html, unsafe_allow_html=True)
+
+                requested = [t for t in CAPABILITY_TAGS if job.get(t, 0) == 1]
+                if requested:
+                    badges = "".join(
+                        render_tag_badge(TAG_LABELS[t], row.get(t, 0) == 1)
+                        for t in requested
+                    )
+                    st.markdown(badges, unsafe_allow_html=True)
+
+                yelp_url = (
+                    "https://www.yelp.com/search?find_desc="
+                    + quote_plus(row["name"])
+                    + "&find_loc="
+                    + quote_plus(f"{row['city']}, {row['state']}")
+                )
+                st.markdown(f"[Search on Yelp]({yelp_url})", unsafe_allow_html=False)
+
+                with st.expander("Categories"):
+                    st.write(row["categories"])
 
     with st.expander("Model metrics"):
         st.json(metrics)
 
     with st.expander("Parsed job features (debug)"):
         st.json(job)
+
 else:
     st.markdown("Fill out the form or describe your job above, then click **Find Cleaners**.")
