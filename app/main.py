@@ -178,6 +178,14 @@ if job:
         summary_parts.append(" · ".join(extra_tags))
     st.info("  ·  ".join(summary_parts))
 
+    requested = [t for t in CAPABILITY_TAGS if job.get(t, 0) == 1]
+    if not requested:
+        st.warning(
+            "💡 **Tip:** Adding details like 'pet-friendly', 'eco-friendly', 'deep clean', "
+            "or 'fast turnaround' helps us find a better match for you.",
+            icon=None,
+        )
+
     matches, metrics = rank_cleaners(job, top_n=5)
 
     if matches.empty:
@@ -212,14 +220,18 @@ if job:
 
                 with col_rate:
                     if abs(budget_diff) <= 8:
-                        rate_html = f'<span style="color:#2d6a4f;font-weight:600;">${rate:.0f}/hr</span>'
+                        rate_bg, rate_color = "#2d6a4f", "white"
                     elif budget_diff > 0:
-                        rate_html = f'<span style="color:#b5451b;font-weight:600;">${rate:.0f}/hr</span>'
+                        rate_bg, rate_color = "#b5451b", "white"
                     else:
-                        rate_html = f'<span style="color:#4a4a4a;font-weight:600;">${rate:.0f}/hr</span>'
+                        rate_bg, rate_color = "#5a5a5a", "white"
+                    rate_html = (
+                        f'<span style="background:{rate_bg};color:{rate_color};'
+                        f'padding:5px 12px;border-radius:10px;font-weight:700;'
+                        f'font-size:1.1rem;">${rate:.0f}/hr</span>'
+                    )
                     st.markdown(rate_html, unsafe_allow_html=True)
 
-                requested = [t for t in CAPABILITY_TAGS if job.get(t, 0) == 1]
                 if requested:
                     badges = "".join(
                         render_tag_badge(TAG_LABELS[t], row.get(t, 0) == 1)
