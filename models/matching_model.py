@@ -186,16 +186,32 @@ def _reason_tags(row: pd.Series, job: dict) -> list[str]:
 def rank_cleaners(job: dict, top_n: int = 5):
     # Load trained model and feature schema
     model, feature_columns, metrics = load_model()
+
     # Build dataset of all cleaners for this job
     candidates = _build_candidate_frame(job)
 
     X_candidates = candidates[feature_columns].copy()
+
+    # Predict base compatibility scores
     candidates["predicted_compatibility"] = model.predict(X_candidates)
+
+    # Add a small boost when cleaner tags match requested job needs
+    specialization_bonus = (
+        (job.get("deep_clean", 0) * candidates["deep_clean"]) +
+        (job.get("move_out", 0) * candidates["move_out"]) +
+        (job.get("pet_friendly", 0) * candidates["pet_friendly"]) +
+        (job.get("fast_turnaround", 0) * candidates["fast_turnaround"]) +
+        (job.get("detail_oriented", 0) * candidates["detail_oriented"]) +
+        (job.get("eco_friendly", 0) * candidates["eco_friendly"])
+    ) * 0.08
+
+    candidates["predicted_compatibility"] += specialization_bonus
     candidates["predicted_compatibility"] = candidates["predicted_compatibility"].clip(0, 1)
 
+    # Add explanation tags for interpretability
     candidates["reason_tags"] = candidates.apply(lambda row: _reason_tags(row, job), axis=1)
 
-    # Predict compatibility scores
+    # Sort and return top N cleaners
     ranked = candidates.sort_values(
         by=["predicted_compatibility", "stars", "review_count"],
         ascending=[False, False, False],
